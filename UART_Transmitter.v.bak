@@ -1,0 +1,77 @@
+module UART_Transmitter (
+    input wire clk,            // Clock signal
+    input wire rst,            // Reset signal
+    input wire write,          // Write signal
+    input wire [7:0] data,     // 8-bit data to be transmitted
+    output reg tx,             // Serial output
+    output reg txrdy           // Transmitter ready signal
+);
+
+    parameter BAUD_RATE = 9600;
+    parameter CLOCK_FREQ = 50000000;
+    localparam BAUD_TICK = CLOCK_FREQ / BAUD_RATE;
+
+    localparam TX_IDLE  = 2'b00, 
+               TX_START = 2'b01, 
+               TX_DATA  = 2'b10, 
+               TX_STOP  = 2'b11;
+
+    reg [1:0] tx_state;          // State register for the transmitter FSM
+    reg [7:0] tx_shift_reg;      // Shift register to hold data
+    reg [3:0] bit_count;         // Bit counter
+    reg [15:0] baud_count;       // Baud rate counter
+
+    always @(posedge clk) begin
+        if (rst) begin
+            tx <= 1'b1;  // TX idle state is high
+            txrdy <= 1'b1;
+            tx_state <= TX_IDLE;
+            baud_count <= 0;
+            bit_count <= 0;
+            tx_shift_reg <= 8'b0;
+        end else begin
+            case (tx_state)
+                TX_IDLE: begin
+                    if (write && txrdy) begin
+                        tx_shift_reg <= data;
+                        txrdy <= 1'b0;  // Transmission in progress
+                        tx_state <= TX_START;
+                    end
+                end
+                TX_START: begin
+                    if (baud_count == BAUD_TICK) begin
+                        tx <= 1'b0;  // Start bit
+                        baud_count <= 0;
+                        tx_state <= TX_DATA;
+                        bit_count <= 0;
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+                TX_DATA: begin
+                    if (baud_count == BAUD_TICK) begin
+                        tx <= tx_shift_reg[bit_count];
+                        baud_count <= 0;
+                        bit_count <= bit_count + 1;
+                        if (bit_count == 8) begin
+                            tx_state <= TX_STOP;
+                        end
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+                TX_STOP: begin
+                    if (baud_count == BAUD_TICK) begin
+                        tx <= 1'b1;  // Stop bit
+                        baud_count <= 0;
+                        txrdy <= 1'b1;  // Transmission complete
+                        tx_state <= TX_IDLE;
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+            endcase
+        end
+    end
+
+endmodule

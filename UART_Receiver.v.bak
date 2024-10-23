@@ -1,0 +1,87 @@
+module UART_Receiver (
+    input wire clk,            // Clock signal
+    input wire rst,            // Reset signal
+    input wire read,           // Read signal
+    input wire rx,             // Serial input
+    output reg rxrdy,          // Receiver ready signal
+    output reg [7:0] data,     // Parallel output data
+    output reg parityerr,      // Parity error signal
+    output reg framingerr,     // Framing error signal
+    output reg overrun         // Overrun error signal
+);
+
+    parameter BAUD_RATE = 9600;
+    parameter CLOCK_FREQ = 50000000;
+    localparam BAUD_TICK = CLOCK_FREQ / BAUD_RATE;
+
+    localparam RX_IDLE  = 2'b00, 
+               RX_START = 2'b01, 
+               RX_DATA  = 2'b10, 
+               RX_STOP  = 2'b11;
+
+    reg [1:0] rx_state;        // State register for the receiver FSM
+    reg [7:0] rx_shift_reg;    // Shift register to store received data
+    reg [3:0] bit_count;       // Bit counter
+    reg [15:0] baud_count;     // Baud rate counter
+    reg rx_prev;               // Previous RX state for edge detection
+
+    always @(posedge clk) begin
+        if (rst) begin
+            rx_state <= RX_IDLE;
+            rxrdy <= 1'b0;
+            bit_count <= 0;
+            baud_count <= 0;
+            framingerr <= 1'b0;
+            parityerr <= 1'b0;
+            overrun <= 1'b0;
+            rx_shift_reg <= 8'b0;
+        end else begin
+            rx_prev <= rx;
+            case (rx_state)
+                RX_IDLE: begin
+                    if (rx == 1'b0 && rx_prev == 1'b1) begin  // Start bit detection
+                        baud_count <= BAUD_TICK / 2;  // Sample in the middle of the start bit
+                        rx_state <= RX_START;
+                    end
+                end
+                RX_START: begin
+                    if (baud_count == BAUD_TICK) begin
+                        baud_count <= 0;
+                        rx_state <= RX_DATA;
+                        bit_count <= 0;
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+                RX_DATA: begin
+                    if (baud_count == BAUD_TICK) begin
+                        baud_count <= 0;
+                        rx_shift_reg[bit_count] <= rx;
+                        bit_count <= bit_count + 1;
+                        if (bit_count == 8) begin
+                            rx_state <= RX_STOP;
+                        end
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+                RX_STOP: begin
+                    if (baud_count == BAUD_TICK) begin
+                        if (rx != 1'b1) begin
+                            framingerr <= 1'b1;  // Stop bit should be 1
+                        end else begin
+                            framingerr <= 1'b0;
+                        end
+                        rxrdy <= 1'b1;  // Data ready
+                        data <= rx_shift_reg;  // Latch received data
+                        rx_state <= RX_IDLE;
+                        if (rxrdy && !read) overrun <= 1'b1;  // Overrun if not read in time
+                    end else begin
+                        baud_count <= baud_count + 1;
+                    end
+                end
+            endcase
+        end
+    end
+
+endmodule

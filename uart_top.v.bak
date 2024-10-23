@@ -1,0 +1,39 @@
+module UART (
+    input wire clk,           // Clock signal
+    input wire rst,           // Reset signal
+    input wire write,         // Write signal for transmitter
+    input wire read,          // Read signal for receiver
+    input wire [7:0] data,    // Data to be transmitted or received
+    input wire rx,            // Serial input for receiver
+    output wire tx,           // Serial output for transmitter
+    output wire txrdy,        // Transmitter ready signal
+    output wire rxrdy,        // Receiver ready signal
+    output wire parityerr,    // Parity error signal
+    output wire framingerr,   // Framing error signal
+    output wire overrun       // Overrun error signal
+);
+
+    // Instantiate the transmitter module
+    UART_Transmitter transmitter_inst (
+        .clk(clk),
+        .rst(rst),
+        .write(write),
+        .data(data),
+        .tx(tx),
+        .txrdy(txrdy)
+    );
+
+    // Instantiate the receiver module
+    UART_Receiver receiver_inst (
+        .clk(clk),
+        .rst(rst),
+        .read(read),
+        .rx(rx),
+        .rxrdy(rxrdy),
+        .data(data),
+        .parityerr(parityerr),
+        .framingerr(framingerr),
+        .overrun(overrun)
+    );
+
+endmodule
