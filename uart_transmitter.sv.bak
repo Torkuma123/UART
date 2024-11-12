@@ -3,7 +3,7 @@
 module UART_Transmitter (
     input wire clk,              // System clock input
     input wire rst,              // Active high reset signal
-    input wire [7:0] data_in,    // 8-bit data input to be transmitted
+    input wire [7:0] data_in = 8'b0,    // 8-bit data input to be transmitted...Defaulted to zero's
     input wire tx_start,         // Signal to start the transmission process
     output reg tx,               // Serial data output
     output wire tx_done          // Transmission complete signal

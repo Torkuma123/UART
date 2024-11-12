@@ -82,15 +82,17 @@ module UART_TESTBENCH;
         
       // Send a command to the UART (exercise Rx)
   
-    //   @(posedge clk); // ( WITH_OUT ANY CRC OR DATA BITS ERROR) (Instruction ---> comment out to test 1 at a time}
+    //   @(posedge clk);	// ( WITH_OUT ANY CRC OR DATA BITS ERROR)
                     // For 8'b3F (binary 0011 1111): CRC = 4'b0101 (or decimal 5) for wave form verification on rx wire
      //  UART_WRITE_BYTE(12'b0101_0011_1111);	// with_out crc_error concatenated  { 4_bits crc + 8_bits}
     
-       // (Instruction ---> comment out to test 1 at a time}
-   // @(posedge clk);  // ( WITH CRC ERROR ) For 8'b3F (binary 0011 1111): CRC = 4'b0101 (or decimal 5) for wave form verification on rx wire
+    
+   // @(posedge clk);  // ( WITH CRC ERROR)
+                    // For 8'b3F (binary 0011 1111): CRC = 4'b0101 (or decimal 5) for wave form verification on rx wire
    //    UART_WRITE_BYTE(12'b0111_0011_1111);	// with crc_error concatenated { 4_bits crc + 8_bits}
     
          @(posedge clk);  // (WITH DATA BIT ERROR)
+        
                         // For 8'b3F (binary 0011 1111): CRC = 4'b0101 (or decimal 5) for wave form verification on rx wire
        UART_WRITE_BYTE(12'b1010_0011_1011);	// with erorr in data bit  concatenated { 4_bits crc + 8_bits}
          end // End for Initail block
